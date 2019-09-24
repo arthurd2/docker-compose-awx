@@ -1,78 +1,84 @@
-version: '2'
+version: '3.7'
 services:
+  postgres:
+    image: "postgres:9.6"
+    environment:
+      POSTGRES_USER: awx
+      POSTGRES_PASSWORD: "Ch4ng3m3!"
+      POSTGRES_DB: awx
 
-  web:
-    image: ansible/awx_web
-    container_name: awx_web
-    depends_on:
-      - rabbitmq
-      - memcached
-      - postgres
-    ports:
-      - "8052:8052"
-    hostname: awx_web
-    user: root
-    restart: unless-stopped
-    volumes:
-      - "/docker/awx/SECRET_KEY:/etc/tower/SECRET_KEY"
-      - "/docker/awx/environment.sh:/etc/tower/conf.d/environment.sh"
-      - "/docker/awx/credentials.py:/etc/tower/conf.d/credentials.py"
-      - "/docker/awx/projects:/var/lib/awx/projects:rw"
-#      - "/docker/awx/ca-trust:/etc/pki/ca-trust/source/anchors:ro"
-  task:
-    image: ansible/awx_task
-    container_name: awx_task
-    depends_on:
-      - rabbitmq
-      - memcached
-      - web
-      - postgres
-    hostname: awx
-    user: root
-    restart: unless-stopped
-    volumes:
-      - "/docker/awx/SECRET_KEY:/etc/tower/SECRET_KEY"
-      - "/docker/awx/environment.sh:/etc/tower/conf.d/environment.sh"
-      - "/docker/awx/credentials.py:/etc/tower/conf.d/credentials.py"
-      - "/docker/awx/projects:/var/lib/awx/projects:rw"
-#      - "/docker/awx/ca-trust:/etc/pki/ca-trust/source/anchors:ro"
-    environment:
-      DATABASE_USER: "awx"
-      DATABASE_NAME: "awx"
-      DATABASE_HOST: "postgres"
-      DATABASE_PORT: "5432"
-      DATABASE_PASSWORD=: "Ch4ng3m3!"
-      MEMCACHED_HOST: "memcached"
-      RABBITMQ_HOST: "rabbitmq"
-      AWX_ADMIN_USER: "admin"
-      AWX_ADMIN_PASSWORD: "changeme"
-  
   rabbitmq:
-    image: ansible/awx_rabbitmq
-    container_name: awx_rabbitmq
-    hostname: rabbitmq
-    restart: unless-stopped
+    image: "rabbitmq:3"
     environment:
-      RABBITMQ_DEFAULT_VHOST: "awx"
-      RABBITMQ_DEFAULT_USER: "guest"
-      RABBITMQ_DEFAULT_PASS: "guest"
-      RABBITMQ_ERLANG_COOKIE: "cookiemonster"
+      RABBITMQ_DEFAULT_VHOST: awx
 
   memcached:
-    image: memcached:alpine
-    container_name: awx_memcached
-    hostname: memcached
-    restart: unless-stopped
+    image: "memcached:alpine"
 
-  postgres:
-    image: postgres:9.6
-    hostname: postgres
-    container_name: awx_postgres
-    restart: unless-stopped
-    volumes:
-      - /docker/awx/pg/data:/var/lib/postgresql/data:Z
+  awxweb:
+    image: "ansible/awx_web:latest"
+    depends_on:
+      - rabbitmq
+      - memcached
+      - postgres
+    configs:
+      - source: awx_credenciais
+        target: /etc/tower/conf.d/credentials.py
+      - source: awx_env
+        target: /etc/tower/conf.d/environment.sh
+      - source: awx_key
+        target: /etc/tower/SECRET_KEY
+    ports:
+      - "80:8052"
+    hostname: awxweb
+    user: root
     environment:
-      POSTGRES_USER: "awx"
-      POSTGRES_PASSWORD: "Ch4ng3m3!"
-      POSTGRES_DB: "awx"
-      PGDATA: /var/lib/postgresql/data/pgdata
+      SECRET_KEY: aabbcc
+      DATABASE_USER: awx
+      DATABASE_PASSWORD: awxpass
+      DATABASE_NAME: awx
+      DATABASE_PORT: 5432
+      DATABASE_HOST: postgres
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_VHOST: awx
+      MEMCACHED_HOST: memcached
+      MEMCACHED_PORT: 11211
+
+  tasks:
+    image: "ansible/awx_task:latest"
+    depends_on:
+      - awxweb
+    hostname: awx
+    user: root
+    configs:
+      - source: awx_credenciais
+        target: /etc/tower/conf.d/credentials.py
+      - source: awx_env
+        target: /etc/tower/conf.d/environment.sh
+      - source: awx_key
+        target: /etc/tower/SECRET_KEY
+    environment:
+      SECRET_KEY: aabbcc
+      DATABASE_USER: awx
+      DATABASE_PASSWORD: awxpass
+      DATABASE_NAME: awx
+      DATABASE_PORT: 5432
+      DATABASE_HOST: postgres
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_VHOST: awx
+      MEMCACHED_HOST: memcached
+      MEMCACHED_PORT: 11211
+      
+configs:
+  awx_credenciais:
+    file: ./credentials.py
+  awx_env:
+    file: ./environment.sh
+  awx_key:
+    file: SECRET_KEY
