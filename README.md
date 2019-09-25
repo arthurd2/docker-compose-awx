@@ -13,9 +13,11 @@ git clone https://github.com/arthurd2/docker-compose-awx.git awx
 cd awx
 sudo docker swarm init
 docker stack deploy awx -c docker-compose.yml
+sleep 17
 echo "Enjoy life... =D"
 ```
-
+- Open http://localhost on your Browser
+- Credentials - admin/awxawx
 # External DB?
 Change variables in the following files:
 1. docker-compose.yml

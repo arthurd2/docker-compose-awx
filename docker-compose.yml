@@ -1,4 +1,4 @@
-version: '3.7'
+version: '3.5'
 services:
   postgres:
     image: "postgres:9.6"
@@ -77,8 +77,8 @@ services:
       
 configs:
   awx_credenciais:
-    file: ./credentials.py
+    file: ./files/credentials.py
   awx_env:
-    file: ./environment.sh
+    file: ./files/environment.sh
   awx_key:
-    file: SECRET_KEY
+    file: ./files/SECRET_KEY
